@@ -9,6 +9,10 @@ export function validateProposal(value,world){
  }
  if(type==='toggleGenerator')return {type};
  if(type==='repair'||type==='observe')return {type};
+ if(type==='createItem'){
+   if(typeof value.name!=='string'||!/^[\p{L}\p{N}][\p{L}\p{N} '-]{0,39}$/u.test(value.name.trim()))throw Error('Invalid object name');
+   return {type,name:value.name.trim()};
+ }
  if(type==='pickup'||type==='drop'){
    if(!world.entities.some(e=>e.id===value.targetId&&e.kind==='item'))throw Error('Unknown item');
    return {type,targetId:value.targetId};
@@ -34,7 +38,11 @@ export function localInterpret(intent,world){
  if(/^(wait|warten|tick|z)$/i.test(text))return {type:'wait'};
  const item=world.entities.find(e=>e.kind==='item'&&text.includes(e.name.toLowerCase().split(' ').at(-1)));
  if(item&&/take|pick|grab|nimm|heb|aufheben|steck/.test(text))return {type:'pickup',targetId:item.id};
- if(item&&/drop|release|leg|wirf|fallen/.test(text))return {type:'drop',targetId:item.id};
+ if(item&&/drop|release|leg|wirf|fallen/.test(text)&&(!/floor|ground|boden/.test(text)||world.entities[0].carrying===item.id))return {type:'drop',targetId:item.id};
+ const placed=intent.match(/(?:throw|toss|place|drop|werfe|wirf|lege|platziere)\s+(?:(?:a|an|the|ein|eine|einen|einem|einer)\s+)?([\p{L}\p{N}][\p{L}\p{N} '-]{0,39}?)\s+(?:on|onto|auf|to)\s+(?:(?:the|den|dem|der|die)\s+)?(?:floor|ground|boden)\b/iu);
+ const made=intent.match(/(?:create|spawn|erschaffe|erzeuge)\s+(?:(?:a|an|the|ein|eine|einen)\s+)?([\p{L}\p{N}][\p{L}\p{N} '-]{0,39})$/iu);
+ const newName=(placed?.[1]||made?.[1])?.trim();
+ if(newName)return {type:'createItem',name:newName};
  const recipient=world.entities.find(e=>e.kind==='person'&&e.id!=='player'&&text.includes(e.id));
  if(item&&recipient&&/give|hand|gib|übergeb/.test(text))return {type:'give',targetId:item.id,recipientId:recipient.id};
  if(/^(say|sage|sag|ruf|shout|tell)\b/i.test(text))return {type:'speak',text:intent.replace(/^(say|sage|sag|ruf|shout|tell)\s*/i,'')};
@@ -42,6 +50,7 @@ export function localInterpret(intent,world){
 }
 export async function interpretIntent(intent,world){
  const fallback=localInterpret(intent,world);
+ if(fallback?.type==='createItem')return {proposal:validateProposal(fallback,world),source:'local'};
  try{
    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),35000);
    let response;

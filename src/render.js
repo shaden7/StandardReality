@@ -23,6 +23,7 @@ function visibleTiles(px,py,radius){
 export function createRenderer(canvas){
  canvas.width=CW*U;canvas.height=CH*U;
  const c=canvas.getContext('2d');
+ const sprites=new Map();let spriteEpoch=0;
  const light=document.createElement('canvas');light.width=canvas.width;light.height=canvas.height;
  const l=light.getContext('2d');
 
@@ -59,6 +60,8 @@ export function createRenderer(canvas){
   if(s.coolingOn){c.fillStyle='rgba(220,245,255,.7)';for(let i=0;i<8;i++)c.fillRect(11*T+2+i*5,13*T+T-4-(i%2)*3,2,2);}
  }
  function item(e,cx,cy,s,now){
+  const sprite=sprites.get(e.id);
+  if(sprite){c.drawImage(sprite,cx-10,cy-10,20,20);return;}
   if(e.id==='cup'){c.fillStyle='#aab4b8';c.fillRect(cx-3,cy-4,6,7);c.fillStyle='#d6dde0';c.fillRect(cx-3,cy-4,6,2);}
   else if(e.id==='tool'){c.strokeStyle='#c9ced1';c.lineWidth=3;c.beginPath();c.moveTo(cx-5,cy+5);c.lineTo(cx+5,cy-5);c.stroke();c.fillStyle='#c9ced1';c.fillRect(cx+3,cy-8,5,5);}
   else if(e.id==='food'){c.fillStyle='#8f6a3c';c.fillRect(cx-7,cy-5,14,11);c.fillStyle='#b58a52';c.fillRect(cx-7,cy-5,14,3);c.fillStyle='#5a3f22';c.fillRect(cx-1,cy-5,2,11);}
@@ -148,6 +151,15 @@ export function createRenderer(canvas){
   }
  }
  return {
+  setSprite(id,url){
+   return new Promise((resolve,reject)=>{
+    const image=new Image(),epoch=spriteEpoch;
+    image.onload=()=>{if(epoch===spriteEpoch)sprites.set(id,image);resolve();};
+    image.onerror=()=>reject(Error('Sprite could not be loaded'));
+    image.src=url;
+   });
+  },
+  clearSprites(){spriteEpoch++;sprites.clear();},
   draw(world,view,now){
    c.setTransform(U,0,0,U,0,0);c.globalCompositeOperation='source-over';c.lineDashOffset=0;c.setLineDash([]);
    const s=world.systems,player=world.entities[0];

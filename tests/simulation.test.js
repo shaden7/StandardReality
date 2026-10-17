@@ -27,3 +27,18 @@ test('speech creates an observable record and hearing event',()=>{
  assert.equal(w.events.some(e=>e.type==='StatementHeard'),true);
  assert.equal(w.events.filter(e=>e.type==='StatementHeard')[0].actorId,'ivo');
 });
+test('creative object enters canonical world and survives replay and snapshot',()=>{
+ const action={type:'createItem',name:'banane'};
+ const w=applyAction(initialWorld(),action),item=w.entities.find(e=>e.name==='banane');
+ assert.equal(item.kind,'item');assert.equal(item.generated,true);
+ assert.equal(item.carriedBy,null);
+ assert.deepEqual({x:item.x,y:item.y},{x:6,y:4});
+ assert.equal(w.events.at(-1).type,'ItemCreated');
+ assert.deepEqual(w,replay(42,[action]));
+ assert.deepEqual(w,loadSnapshot(snapshot(w)));
+});
+test('invalid creative object cannot be introduced',()=>{
+ const w=applyAction(initialWorld(),{type:'createItem',name:'../secret'});
+ assert.equal(w.events.at(-1).type,'ActionRejected');
+ assert.equal(w.entities.some(e=>e.generated),false);
+});

@@ -15,6 +15,7 @@ export function formatEvent(w,e){
   case 'ItemPickedUp':return {cls:'ac',who:'',text:`${who} hebt ${itemName(w,e.itemId)} auf.`};
   case 'ItemDropped':return {cls:'ac',who:'',text:`${who} legt ${itemName(w,e.itemId)} ab.`};
   case 'ItemGiven':return {cls:'ac',who:'',text:`${who} gibt ${itemName(w,e.itemId)} an ${shortName(w,e.recipientId)}.`};
+  case 'ItemCreated':return {cls:'ac',who:'',text:`${who} bringt ${itemName(w,e.itemId)} in die Welt. Grafik wird erzeugt.`};
   case 'GeneratorSwitched':return {cls:'sy',who:'',text:`Generator ${e.on?'eingeschaltet':'abgeschaltet'} (${who}).`};
   case 'GeneratorRepaired':return {cls:'sy',who:'',text:`Generator repariert (${who}).`};
   case 'LightingChanged':return {cls:'sy',who:'',text:`Beleuchtung ${e.on?'an':'aus'}.`};
@@ -36,6 +37,7 @@ export function nodeLabel(w,e){
   case 'StatementHeard':return `${shortName(w,e.actorId)} hört`;
   case 'ItemPickedUp':return `${itemName(w,e.itemId)} aufgehoben`;
   case 'ItemDropped':return `${itemName(w,e.itemId)} abgelegt`;
+  case 'ItemCreated':return `${itemName(w,e.itemId)} erschaffen`;
   default:return e.type;
  }
 }

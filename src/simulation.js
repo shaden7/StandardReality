@@ -35,6 +35,16 @@ function resolve(w,a){
   }return spoken;
  }
  if(a.type==='observe')return emit(w,'Observed',{actorId:actor.id,observations:observe(w,actor.id,roomAt)});
+ if(a.type==='createItem'){
+  const name=typeof a.name==='string'?a.name.trim():'';
+  if(actor.id!=='player')return reject('Only the player can introduce a new object');
+  if(!/^[\p{L}\p{N}][\p{L}\p{N} '-]{0,39}$/u.test(name))return reject('Invalid object name');
+  if(w.entities.filter(e=>e.generated).length>=32)return reject('Creative object limit reached');
+  const spot=[[0,1],[1,0],[0,-1],[-1,0]].map(([dx,dy])=>({x:actor.x+dx,y:actor.y+dy})).find(p=>isPassable(p.x,p.y)&&!w.entities.some(e=>!e.carriedBy&&e.x===p.x&&e.y===p.y))||{x:actor.x,y:actor.y};
+  const created={id:'item-'+w.nextId,name,kind:'item',x:spot.x,y:spot.y,carriedBy:null,generated:true};
+  w.entities.push(created);
+  return emit(w,'ItemCreated',{actorId:actor.id,itemId:created.id,to:spot,mode:'creative'});
+ }
  if(a.type==='toggleGenerator'||a.type==='repair'){
   if(roomAt(actor.x,actor.y)!=='engine')return reject('Generator controls are in the engine room');
   if(a.type==='repair'&&(w.systems.generatorOn||actor.carrying!=='tool'))return reject('Repair requires failed generator and spanner');

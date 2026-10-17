@@ -26,6 +26,29 @@ let world=initialWorld(),selected='cup',overlay='off',fog=true,admin=false,cause
 let running=false,timer=null,revision=0,runEpoch=0;
 let agentBusy=false,lastAgentCall=0,agentCursor=0;
 const canvas=$('#world'),renderer=createRenderer(canvas),menu=$('#menu');
+const spriteStates=new Map();let assetEpoch=0;
+async function requestSprite(item){
+ const epoch=assetEpoch;spriteStates.set(item.id,'loading');
+ try{
+  const response=await fetch('/api/sprite',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:item.name})});
+  const result=await response.json();
+  if(!response.ok)throw Error(result.error||'Image generation failed');
+  if(!/^\/api\/sprites\/[a-f0-9]{64}\.png$/.test(result.url))throw Error('Invalid sprite URL');
+  if(epoch!==assetEpoch)return;
+  await renderer.setSprite(item.id,result.url);
+  if(epoch!==assetEpoch)return;
+  spriteStates.set(item.id,'ready');refresh();
+ }catch(error){
+  if(epoch!==assetEpoch)return;
+  spriteStates.set(item.id,'failed');
+  feedback('Grafik für '+item.name+' nicht verfügbar: '+error.message+'. Platzhalter bleibt sichtbar.');
+  refresh();
+ }
+}
+function ensureSprites(){
+ for(const item of world.entities.filter(e=>e.generated&&e.kind==='item'))if(!spriteStates.has(item.id))void requestSprite(item);
+}
+function clearSprites(){assetEpoch++;spriteStates.clear();renderer.clearSprites();}
 const pause=()=>{running=false;runEpoch++;clearInterval(timer);timer=null;$('#run').textContent='Start';};
 async function requestAgentDecision(){
  if(agentBusy||!running||world.tick<15||performance.now()-lastAgentCall<30000)return;
@@ -71,12 +94,14 @@ function renderExamine(){
  const color={player:'#3f8fd0',mara:'#d98a3d',ivo:'#e8e4d6',neri:'#8d7fd1'}[e.id]||'#8a7f5a';
  let html=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><div class="avatar" style="background:${color}"></div><div><div style="font-weight:600;color:#fff">${esc(shortName(world,e.id))}</div><div class="mu">${esc(role)}</div></div></div><div>Ort: ${esc(where)}</div>`;
  if(e.kind==='person')html+=`<div>Trägt: ${esc(world.entities.find(x=>x.id===e.carrying)?.name||'nichts')}</div>`;
+ if(e.generated)html+=`<div>Grafik: ${{loading:'wird erzeugt',ready:'bereit',failed:'Platzhalter (API nicht verfügbar)'}[spriteStates.get(e.id)]||'ausstehend'}${spriteStates.get(e.id)==='failed'?'<button id="retrySprite">Erneut versuchen</button>':''}</div>`;
  const a=world.agents[e.id];
  if(a&&admin){
   const last=world.decisions.findLast(d=>d.actorId===e.id),facts=agentFacts(world,e.id);
   html+=`<pre class="dbg">${esc(`Ziel: ${a.goal}\nPlan: ${a.plan?JSON.stringify(a.plan):'idle'}\nLetzte Entscheidung: ${last?`#${last.id} ${last.source} · ${last.reason}`:'—'}\nGlaube und Wissen:\n${facts.length?facts.map(f=>`- ${f.text} (${f.source}, ${f.confidence.toFixed(2)})`).join('\n'):'—'}`)}</pre>`;
  }
  box.innerHTML=html;
+ $('#retrySprite')?.addEventListener('click',()=>{spriteStates.delete(e.id);ensureSprites();renderExamine();});
 }
 function renderSystems(){
  const s=world.systems,row=(label,value,ok)=>`<div class="row"><span>${label}</span><span class="${ok?'ok':'bad'}">${value}</span></div>`;
@@ -97,10 +122,11 @@ function renderAdmin(){
  $('#decisions').replaceChildren(...world.decisions.slice(-12).reverse().map(d=>{const p=document.createElement('p');p.textContent=`#${d.id} [${d.tick}] ${d.actorId} · ${d.source} · ${d.goal} → ${d.action?.type||'idle'}: ${d.reason}`;return p;}));
 }
 function refresh(){
+ ensureSprites();
  document.querySelectorAll('#overlays button').forEach(b=>b.classList.toggle('on',b.dataset.ov===overlay));
  renderLog();renderExamine();renderSystems();renderHands();renderAdmin();
 }
-function act(a){world=applyAction(world,a);revision++;refresh();}
+function act(a){world=applyAction(world,a);if(world.events.at(-1)?.type==='ItemCreated')selected=world.events.at(-1).itemId;revision++;refresh();}
 function step(dx,dy){act({type:'move',dx,dy});}
 function itemAction(){
  const actor=world.entities[0],item=world.entities.find(e=>e.id===selected&&e.kind==='item');
@@ -163,6 +189,7 @@ $('#command').addEventListener('submit',async e=>{
   else{
    if(proposal.type==='wait')world=advanceWorld(world);
    else world=applyAction(world,proposal);
+   if(world.events.at(-1)?.type==='ItemCreated')selected=world.events.at(-1).itemId;
    revision++;
    feedback((source==='llm'?'LLM':'Local parser')+' proposed '+JSON.stringify(proposal)+(error?' · AI unavailable: '+error:'')+(requestedAt!==revision-1?' · World advanced while interpreting. Action resolved against current state.':''));
   }
@@ -171,10 +198,10 @@ $('#command').addEventListener('submit',async e=>{
  finally{button.disabled=false;input.focus();}
 });
 $('#save').onclick=()=>{localStorage.setItem('standardReality.m2',snapshot(world));feedback('Snapshot saved locally.');};
-$('#load').onclick=()=>{try{pause();world=loadSnapshot(localStorage.getItem('standardReality.m2'));revision++;causeEvent=null;refresh();}catch{feedback('No valid snapshot found.');}};
+$('#load').onclick=()=>{try{pause();world=loadSnapshot(localStorage.getItem('standardReality.m2'));clearSprites();revision++;causeEvent=null;refresh();}catch{feedback('No valid snapshot found.');}};
 $('#run').onclick=()=>running?pause():start();
 $('#speed').onchange=()=>{if(running)start();};
 $('#wait').onclick=()=>{if(running)return;world=advanceWorld(world);revision++;refresh();};
 $('#wait5').onclick=()=>{if(running)return;for(let i=0;i<5;i++)world=advanceWorld(world);revision++;refresh();};
-$('#reset').onclick=()=>{pause();world=initialWorld();revision++;causeEvent=null;refresh();};
+$('#reset').onclick=()=>{pause();world=initialWorld();clearSprites();revision++;causeEvent=null;refresh();};
 refresh();requestAnimationFrame(frame);

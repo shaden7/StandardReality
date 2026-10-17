@@ -35,6 +35,10 @@ Can a player attempt an unanticipated action, have it interpreted consistently, 
 
 The playable M2 prototype now includes three autonomous inhabitants, subjective perception and belief, a simulation clock, optional throttled NPC model decisions, and a causal debug view. See [M2 observations and limits](docs/M2.md).
 
+### Generated objects and sprites
+
+Type `ich werfe eine banane auf den boden` or `create a banana` in the command field. This uses a bounded creative action to add a portable item to the canonical world on a free nearby tile. The browser shows a placeholder immediately. If the local API gateway has an image-capable OpenAI key, it requests transparent pixel-art imagery in the background; the rendered PNG is cached under `generated-sprites/` and reused after loading a snapshot. The folder is ignored by Git. Without image access, the item remains usable with its placeholder and the UI offers a retry. Set `OPENAI_IMAGE_MODEL` on the gateway to choose a supported GPT Image model; the default is `gpt-image-2.5-flare`. Each new uncached item design may incur an image-generation charge.
+
 ## Run locally
 
 Install dependencies with `npm install`. Start the API gateway in one PowerShell window:
