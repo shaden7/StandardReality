@@ -7,7 +7,7 @@ export function initialWorld(seed = 42) {
     {id:'mara',name:'Mara (mechanic)',kind:'person',x:13,y:4,carrying:null},
     {id:'ivo',name:'Ivo (cook)',kind:'person',x:6,y:8,carrying:null},
     {id:'ore',name:'Strange salvage',kind:'item',x:18,y:12,carriedBy:null},
-    {id:'cup',name:'Metal mug',kind:'item',x:6,y:5,carriedBy:null},
+    {id:'cup',name:'Metal mug',kind:'item',x:5,y:5,carriedBy:null},
     {id:'tool',name:'Spanner',kind:'item',x:13,y:6,carriedBy:null}
   ],events:[]};
 }
