@@ -2,9 +2,11 @@
 
 Each milestone must leave a runnable, testable artifact and a short written finding. Prefer the smallest complete causal loop over broad scaffolding.
 
+**Setting and scope:** [The Mender — crawler design](SETTING.md). The first slice is the canteen, workshop, engine room, airlock, a tiny exterior patch and a small NPC cast. Never expand to a full vehicle before the core causal loop works.
+
 ## M0 — World and event substrate
 - Set up TypeScript monorepo/application, tests, local run instructions, lint/CI.
-- Render rooms and agents in 2D; implement a headless simulation loop.
+- Render a few connected crawler rooms and agents in 2D; implement a headless simulation loop. Fake exterior travel with scenery/stop states initially.
 - Stable entity IDs, state components, seedable RNG, event log, snapshot/load.
 - Demonstrate moving an object and replaying identical results from recorded actions.
 
@@ -19,7 +21,7 @@ Each milestone must leave a runnable, testable artifact and a short written find
 **Exit:** an unanticipated phrasing maps to existing primitives without changing code.
 
 ## M2 — Agent perception and memory
-- 3–5 inhabitants with goals, routines, local perception and private beliefs.
+- Up to 8 crawler inhabitants with goals, routines, local perception and private beliefs.
 - Routine rule-based behavior, occasional LLM decisions, scheduled reflection.
 - Persist observations and interpersonal consequences.
 - Model "someone said X" separately from "X is true".
@@ -27,7 +29,7 @@ Each milestone must leave a runnable, testable artifact and a short written find
 **Exit:** a witnessed dispute changes later NPC behavior, without another player input.
 
 ## M3 — Emergent causal chains
-- Add selected interoperable systems: simple electricity, hazards, access permissions, equipment damage.
+- Add selected interoperable crawler systems: generator/power dependency, cooling or lighting, hazards, access permissions, equipment damage. Include a bounded exterior patch and one salvage object.
 - Observable consequences travel through systems with bounded event budgets.
 - Debug timeline traces causal links for each important outcome.
 
