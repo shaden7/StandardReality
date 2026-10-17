@@ -8,14 +8,18 @@ StandardReality is a **persistent emergent storytelling sandbox**, not a traditi
 
 ## Experience: a first playable slice
 
-- A compact 2D space station: canteen, corridor, engineering bay, command room.
-- 3–5 NPCs with goals, basic routines, relationships, and private knowledge.
+- A compact 2D slice of a giant mobile industrial crawler: canteen, workshop, engine room, airlock, plus a tiny alien exterior patch. See [SETTING.md](SETTING.md).
+- Up to 8 prototype NPCs with goals, basic routines, relationships, and private knowledge.
 - Player moves, observes, inspects and types natural-language intentions.
 - Physical entities have identities, components, inventory, location and state.
 - Every meaningful action produces observable events, durable state changes, and optionally NPC memories.
 - A debug panel exposes world state, proposed actions, rejected actions, event chains, prompts, cost and latency.
 
-Example: "I climb onto the table and accuse the captain of stealing supplies." The parser proposes a climb and speech action. The core engine resolves reachability and resulting positions; observers interpret the accusation based on their beliefs; nearby agents may react or pursue their own goals. Neither an automatic mob riot nor any particular conclusion is hard-coded.
+Example: "I climb onto the table and accuse the navigator of stealing salvage." The parser proposes a climb and speech action. The core engine resolves reachability and resulting positions; observers interpret the accusation based on their beliefs; nearby agents may react or pursue their own goals. Neither an automatic mob riot nor any particular conclusion is hard-coded.
+
+## Setting direction
+
+The world is set aboard a gigantic, slowly moving crawler carrying a small society through strange terrain. It performs recovery, inspection and repair jobs issued by an opaque navigation system; this is background context, **not a required player quest**. First slice stays bounded and need not simulate continuous overland motion. [Setting bible and prototype scope](SETTING.md).
 
 ## Layers (interfaces first, boundaries provisional)
 
