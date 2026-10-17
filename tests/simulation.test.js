@@ -25,5 +25,5 @@ test('speech creates an observable record and hearing event',()=>{
  const w=applyAction(initialWorld(),{type:'speak',text:'The navigator lies.'});
  assert.equal(w.events.some(e=>e.type==='StatementSpoken'),true);
  assert.equal(w.events.some(e=>e.type==='StatementHeard'),true);
- assert.equal(w.events.filter(e=>e.type==='StatementHeard')[0].actorId,'mara');
+ assert.equal(w.events.filter(e=>e.type==='StatementHeard')[0].actorId,'ivo');
 });
