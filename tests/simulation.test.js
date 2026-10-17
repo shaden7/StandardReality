@@ -10,10 +10,10 @@ test('generator outage causes effects and autonomous repair',()=>{
  let w=initialWorld();w.entities[0].x=5;w.entities[0].y=9;
  w=applyAction(w,{type:'toggleGenerator'});
  assert.equal(w.systems.generatorOn,false);assert.equal(w.systems.coolingOn,false);
- w=advanceWorld(w);assert.equal(w.agents.mara.noticedFailure,true);
- w=advanceWorld(w);w=advanceWorld(w);
+ w=advanceWorld(w);assert.equal(w.agents.mara.knowledge.generatorOn.value,false);
+ for(let i=0;i<20&&!w.systems.generatorOn;i++)w=advanceWorld(w);
  assert.equal(w.systems.generatorOn,true);
- assert.equal(w.events.some(e=>e.type==='RepairTaskCompleted'),true);
+ assert.equal(w.events.some(e=>e.type==='GeneratorRepaired'&&e.actorId==='mara'),true);
 });
 test('remote generator use is rejected',()=>{
  const w=applyAction(initialWorld(),{type:'toggleGenerator'});

@@ -31,4 +31,20 @@ Can a player attempt an unanticipated action, have it interpreted consistently, 
 
 ## Status
 
-**Concept / pre-prototype.** Architecture and provider choices are hypotheses to evaluate, not locked decisions.
+**Experimental browser prototype.** Architecture and provider choices remain hypotheses to evaluate.
+
+The playable M2 prototype now includes three autonomous inhabitants, subjective perception and belief, a simulation clock, optional throttled NPC model decisions, and a causal debug view. See [M2 observations and limits](docs/M2.md).
+
+## Run locally
+
+Install dependencies with `npm install`. Start the API gateway in one PowerShell window:
+
+```powershell
+$env:OPENAI_API_KEY = [Environment]::GetEnvironmentVariable('OPENAI_API_KEY', 'Machine')
+$env:OPENAI_MODEL = 'gpt-6-luna'
+npm run dev:server
+```
+
+The gateway reads the key from its process environment. If the system variable was added after PowerShell or the desktop app started, loading it as above makes it available to this process. The key stays on the server and must never be placed in Vite variables or browser code. The `.env.example` file documents settings; the server does not load `.env` files automatically.
+
+In another PowerShell window, run `npm run dev` and open `http://127.0.0.1:5173/`. The local rule parser still works if the API gateway is not configured. Run `npm test` for the simulation and gateway checks.
