@@ -1,0 +1,46 @@
+// An intent is a proposal, never authority to mutate world state.
+const directions={north:[0,-1],south:[0,1],east:[1,0],west:[-1,0],norden:[0,-1],süden:[0,1],osten:[1,0],westen:[-1,0]};
+export function validateProposal(value,world){
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Proposal must be an object');
+ const type=value.type;
+ if(type==='move'){
+   if(!Number.isInteger(value.dx)||!Number.isInteger(value.dy)||Math.abs(value.dx)+Math.abs(value.dy)!==1)throw Error('Invalid movement');
+   return {type,dx:value.dx,dy:value.dy};
+ }
+ if(type==='toggleGenerator')return {type};
+ if(type==='pickup'||type==='drop'){
+   if(!world.entities.some(e=>e.id===value.targetId&&e.kind==='item'))throw Error('Unknown item');
+   return {type,targetId:value.targetId};
+ }
+ if(type==='speak'){
+   if(typeof value.text!=='string'||!value.text.trim()||value.text.length>300)throw Error('Invalid speech');
+   return {type,text:value.text.trim()};
+ }
+ if(type==='wait')return {type};
+ throw Error('Unsupported action: '+String(type));
+}
+export function localInterpret(intent,world){
+ const text=intent.trim().toLowerCase();
+ const dir=Object.entries(directions).find(([word])=>new RegExp('\\b'+word+'\\b','u').test(text));
+ if(dir&&/go|move|walk|geh|lauf|step|nach|to|toward/.test(text))return {type:'move',dx:dir[1][0],dy:dir[1][1]};
+ if(/generator|aggregat|stromversorgung|hauptschalter/.test(text)&&/off|on|aus|ein|schalt|switch|toggle|stop|start/.test(text))return {type:'toggleGenerator'};
+ if(/^(wait|warten|tick|z)$/i.test(text))return {type:'wait'};
+ const item=world.entities.find(e=>e.kind==='item'&&text.includes(e.name.toLowerCase().split(' ').at(-1)));
+ if(item&&/take|pick|grab|nimm|heb|aufheben|steck/.test(text))return {type:'pickup',targetId:item.id};
+ if(item&&/drop|release|leg|wirf|fallen/.test(text))return {type:'drop',targetId:item.id};
+ if(/^(say|sage|sag|ruf|shout|tell)\b/i.test(text))return {type:'speak',text:intent.replace(/^(say|sage|sag|ruf|shout|tell)\s*/i,'')};
+ return null;
+}
+export async function interpretIntent(intent,world){
+ const fallback=localInterpret(intent,world);
+ try{
+   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000);
+   let response;
+   try{response=await fetch('/api/interpret',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({intent,world:{entities:world.entities,systems:world.systems,room:world.entities.find(e=>e.id==='player'),tick:world.tick}}),signal:controller.signal});}
+   finally{clearTimeout(timer);}
+   if(response.status===503)return {proposal:fallback?validateProposal(fallback,world):null,source:'local'};
+   if(!response.ok)throw Error('AI request failed: '+response.status);
+   const answer=await response.json();
+   return {proposal:validateProposal(answer.proposal,world),source:'llm'};
+ }catch(error){return {proposal:fallback?validateProposal(fallback,world):null,source:'local',error:error.message};}
+}
