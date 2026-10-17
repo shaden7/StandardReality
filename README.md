@@ -17,7 +17,7 @@ StandardReality explores how free-form player intentions can become persistent, 
 
 ## Initial experiment
 
-A small, single-player 2D space station with a handful of autonomous NPCs, interactable objects, a text command input, an inspectable event log, and optional LLM-assisted interpretation of actions and social behavior.
+A small, single-player 2D section of **a gigantic industrial crawler crossing a strange landscape**. A handful of autonomous inhabitants work, quarrel, improvise repairs and recover unfamiliar objects. The player can attempt open-ended actions; a canonical simulation resolves persistent consequences. The machine follows obscure work orders whose ultimate purpose is unknown.
 
 ### The central test
 
@@ -25,6 +25,7 @@ Can a player attempt an unanticipated action, have it interpreted consistently, 
 
 ## Documentation
 
+- [Setting: The Mender (working title)](docs/SETTING.md)
 - [Concept and architecture](docs/CONCEPT.md)
 - [Experiment plan and milestones](docs/ROADMAP.md)
 
