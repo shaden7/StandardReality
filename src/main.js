@@ -1,7 +1,8 @@
 import {initialWorld,applyAction,advanceWorld,isPassable,roomAt,snapshot,loadSnapshot,WIDTH,HEIGHT} from './simulation.js';
+import {interpretIntent} from './intent.js';
 import './style.css';
 const app=document.querySelector('#app');
-app.innerHTML=`<header><h1>STANDARD<span>REALITY</span></h1><small>THE MENDER · M0 WORLD EXPERIMENT</small></header><main><section><canvas id="world" width="704" height="480" tabindex="0" aria-label="Crawler world"></canvas><div class="hint">Move: WASD / arrows · Select an item by clicking · Pick up / drop: E · Type 'generator off' in ENGINE · Wait: buttons</div><form id="command"><input id="intent" placeholder="Try: go north, take mug, drop mug..." autocomplete="off"/><button>Attempt</button></form><div id="feedback"></div></section><aside><h2>WORLD STATE</h2><div id="details"></div><div class="buttons"><button id="save">Save snapshot</button><button id="load">Load snapshot</button><button id="reset">Reset</button><button id="wait">Wait</button><button id="wait5">Wait 5</button></div><h2>EVENT LOG</h2><div id="events"></div><h2>EXPERIMENT NOTES</h2><p>This is a deterministic world, not an LLM demo yet. Every action changes canonical state; unsupported intentions fail visibly.</p></aside></main>`;
+app.innerHTML=`<header><h1>STANDARD<span>REALITY</span></h1><small>THE MENDER · M1 ACTION INTERPRETER</small></header><main><section><canvas id="world" width="704" height="480" tabindex="0" aria-label="Crawler world"></canvas><div class="hint">Move: WASD / arrows · Select an item by clicking · Pick up / drop: E · Type 'generator off' in ENGINE · Wait: buttons</div><form id="command"><input id="intent" placeholder="Try: go north, take mug, drop mug..." autocomplete="off"/><button>Attempt</button></form><div id="feedback"></div></section><aside><h2>WORLD STATE</h2><div id="details"></div><div class="buttons"><button id="save">Save snapshot</button><button id="load">Load snapshot</button><button id="reset">Reset</button><button id="wait">Wait</button><button id="wait5">Wait 5</button></div><h2>EVENT LOG</h2><div id="events"></div><h2>EXPERIMENT NOTES</h2><p>Free-form intentions are interpreted by an optional server-side LLM, validated, then attempted in the deterministic world. Speak near someone to generate witnessed statements. No AI key required for basic actions.</p></aside></main>`;
 let world=initialWorld(),selected='cup';
 const canvas=document.querySelector('#world'),ctx=canvas.getContext('2d'),size=32;
 const colors={canteen:'#314a4c',workshop:'#594836',engine:'#493e50',airlock:'#3b4d40',exterior:'#283b34'};
@@ -37,17 +38,22 @@ window.addEventListener('keydown',e=>{
  const dirs={w:[0,-1],ArrowUp:[0,-1],s:[0,1],ArrowDown:[0,1],a:[-1,0],ArrowLeft:[-1,0],d:[1,0],ArrowRight:[1,0]};
  if(dirs[e.key]){e.preventDefault();step(...dirs[e.key]);}else if(e.key.toLowerCase()==='e')itemAction();
 });
-document.querySelector('#command').addEventListener('submit',e=>{
- e.preventDefault();const input=document.querySelector('#intent'),text=input.value.trim().toLowerCase();input.value='';
- const d=/(north|up)/.test(text)?[0,-1]:/(south|down)/.test(text)?[0,1]:/(west|left)/.test(text)?[-1,0]:/(east|right)/.test(text)?[1,0]:null;
- if(/(generator|power|strom|aggregat).*(off|on|switch|toggle|aus|an|abschalten|einschalten)/.test(text))act({type:'toggleGenerator'});
- else if(/^(wait|warten|tick|z)$/.test(text)){world=advanceWorld(world);draw();}
- else if(d)step(...d);
- else if(/(take|pick|grab|drop|release)/.test(text)){
-  const named=world.entities.find(ent=>ent.kind==='item'&&text.includes(ent.name.toLowerCase().split(' ').at(-1)));if(named)selected=named.id;
-  act({type:/(drop|release)/.test(text)?'drop':'pickup',targetId:selected});
- }else document.querySelector('#feedback').textContent='Not understood by M0 parser. This is where the future LLM action interpreter plugs in.';
- draw();
+document.querySelector('#command').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const input=document.querySelector('#intent'),button=document.querySelector('#command button'),intent=input.value.trim();
+ if(!intent||button.disabled)return;
+ input.value='';button.disabled=true;document.querySelector('#feedback').textContent='Interpreting: '+intent;
+ try{
+  const {proposal,source,error}=await interpretIntent(intent,world);
+  if(!proposal)document.querySelector('#feedback').textContent='Not yet representable: '+intent+(error?' ('+error+')':'');
+  else{
+   if(proposal.type==='wait')world=advanceWorld(world);
+   else world=applyAction(world,proposal);
+   document.querySelector('#feedback').textContent=(source==='llm'?'LLM':'Local parser')+' proposed '+JSON.stringify(proposal)+(error?' · AI unavailable: '+error:'');
+  }
+  draw();
+ }catch(err){document.querySelector('#feedback').textContent='Action failed: '+err.message;}
+ finally{button.disabled=false;input.focus();}
 });
 document.querySelector('#save').onclick=()=>{localStorage.setItem('standardReality.m0',snapshot(world));document.querySelector('#feedback').textContent='Snapshot saved locally.';};
 document.querySelector('#load').onclick=()=>{try{world=loadSnapshot(localStorage.getItem('standardReality.m0'));draw();}catch{document.querySelector('#feedback').textContent='No valid snapshot found.';}};
