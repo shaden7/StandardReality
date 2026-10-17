@@ -1,0 +1,2 @@
+import {defineConfig} from 'vite';
+export default defineConfig({server:{hmr:false,proxy:{'/api':{target:process.env.API_PROXY_TARGET||'http://127.0.0.1:8787',changeOrigin:false}}}});
