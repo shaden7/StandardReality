@@ -48,6 +48,13 @@ export function applyAction(world,action) {
     if(actor.carrying){const item=next.entities.find(e=>e.id===actor.carrying);item.x=x;item.y=y;}
     emit(next,'PositionChanged',{actorId:actor.id,from,to:{x,y}}); return next;
   }
+  if(action.type==='speak'){
+    if(typeof action.text!=='string'||!action.text.trim()||action.text.length>300){reject('Invalid speech');return next;}
+    emit(next,'StatementSpoken',{actorId:actor.id,text:action.text.trim()});
+    for(const witness of next.entities.filter(e=>e.kind==='person'&&e.id!==actor.id&&dist(e,actor)<=5))
+      emit(next,'StatementHeard',{actorId:witness.id,speakerId:actor.id,text:action.text.trim()});
+    return next;
+  }
   if(action.type==='toggleGenerator'){
     if(roomAt(actor.x,actor.y)!=='engine'){reject('Generator controls are in the engine room');return next;}
     next.systems.generatorOn=!next.systems.generatorOn;
