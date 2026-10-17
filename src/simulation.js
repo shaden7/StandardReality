@@ -9,7 +9,7 @@ export function initialWorld(seed = 42) {
     {id:'ore',name:'Strange salvage',kind:'item',x:18,y:12,carriedBy:null},
     {id:'cup',name:'Metal mug',kind:'item',x:5,y:5,carriedBy:null},
     {id:'tool',name:'Spanner',kind:'item',x:13,y:6,carriedBy:null}
-  ],events:[]};
+  ],systems:{generatorOn:true,lightsOn:true,coolingOn:true,cargoTemperature:4,samplesSpoiled:false},agents:{mara:{noticedFailure:false,repairCountdown:null}},events:[]};
 }
 export function roomAt(x,y) {
   if(x<0||x>=WIDTH||y<0||y>=HEIGHT)return null;
@@ -48,6 +48,12 @@ export function applyAction(world,action) {
     if(actor.carrying){const item=next.entities.find(e=>e.id===actor.carrying);item.x=x;item.y=y;}
     emit(next,'PositionChanged',{actorId:actor.id,from,to:{x,y}}); return next;
   }
+  if(action.type==='toggleGenerator'){
+    if(roomAt(actor.x,actor.y)!=='engine'){reject('Generator controls are in the engine room');return next;}
+    next.systems.generatorOn=!next.systems.generatorOn;
+    emit(next,'GeneratorSwitched',{actorId:actor.id,on:next.systems.generatorOn});
+    updateSystems(next);return next;
+  }
   if(!target||target.kind!=='item'){reject('Target item not found');return next;}
   if(action.type==='pickup'){
     if(target.carriedBy||actor.carrying){reject('Hands full or object already held');return next;}
@@ -61,6 +67,34 @@ export function applyAction(world,action) {
     emit(next,'ItemDropped',{actorId:actor.id,itemId:target.id});return next;
   }
   reject('Unsupported action');return next;
+}
+
+function updateSystems(world){
+  const s=world.systems,power=s.generatorOn;
+  if(s.lightsOn!==power){s.lightsOn=power;emit(world,'LightingChanged',{on:power,cause:'generator'});}
+  if(s.coolingOn!==power){s.coolingOn=power;emit(world,'CoolingChanged',{on:power,cause:'generator'});}
+}
+export function advanceWorld(world){
+  const next=copy(world);next.tick++;
+  const s=next.systems;updateSystems(next);
+  if(!s.coolingOn){
+    s.cargoTemperature=Math.min(24,s.cargoTemperature+2);
+    emit(next,'CargoTemperatureChanged',{temperature:s.cargoTemperature,cause:'cooling-off'});
+    if(s.cargoTemperature>=12&&!s.samplesSpoiled){s.samplesSpoiled=true;emit(next,'SamplesSpoiled',{cause:'overheating'});}
+  }else if(s.cargoTemperature>4){
+    s.cargoTemperature=Math.max(4,s.cargoTemperature-2);
+    emit(next,'CargoTemperatureChanged',{temperature:s.cargoTemperature,cause:'cooling-on'});
+  }
+  const a=next.agents.mara;
+  if(!s.generatorOn&&!a.noticedFailure){a.noticedFailure=true;a.repairCountdown=3;emit(next,'FailureNoticed',{actorId:'mara'});}
+  if(a.repairCountdown!==null){
+    a.repairCountdown--;
+    if(a.repairCountdown<=0){
+      if(!s.generatorOn){s.generatorOn=true;emit(next,'GeneratorSwitched',{actorId:'mara',on:true,cause:'repair'});updateSystems(next);}
+      emit(next,'RepairTaskCompleted',{actorId:'mara'});a.repairCountdown=null;
+    }
+  }
+  return next;
 }
 export function replay(seed,actions){return actions.reduce((w,a)=>applyAction(w,a),initialWorld(seed));}
 export function snapshot(world){return JSON.stringify(world);}
